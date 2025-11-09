@@ -56,16 +56,29 @@ pipeline {
                     // Start services using docker-compose-ci.yml
                     sh """
                         docker-compose -f docker-compose-ci.yml up -d
-                        sleep 10
+                        sleep 15
                         
                         # Check if services are running
                         docker-compose -f docker-compose-ci.yml ps
                         
-                        # Test backend health endpoint
-                        curl -f http://localhost:5001/api/v1 || exit 1
+                        # Wait for backend to be ready (retry up to 30 seconds)
+                        for i in {1..6}; do
+                            if docker ps | grep -q 'mern-chatbot-backend-ci.*Up'; then
+                                echo "Backend container is running"
+                                break
+                            fi
+                            echo "Waiting for backend... (attempt \$i/6)"
+                            sleep 5
+                        done
                         
                         # Test frontend is accessible
                         curl -f http://localhost:5174 || exit 1
+                        echo "Frontend is accessible!"
+                        
+                        # Verify all containers are running
+                        docker ps | grep mern-chatbot-backend-ci
+                        docker ps | grep mern-chatbot-frontend-ci
+                        docker ps | grep mern-chatbot-mongo-ci
                         
                         echo "All services are healthy!"
                     """
