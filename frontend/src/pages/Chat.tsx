@@ -29,14 +29,35 @@ const Chat = () => {
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const handleSubmit = async () => {
     const content = inputRef.current?.value as string;
+    
+    // Validate message content
+    if (!content || content.trim().length === 0) {
+      toast.error("Please enter a message", { id: "chat" });
+      return;
+    }
+    
+    if (content.trim().length > 2000) {
+      toast.error("Message is too long (max 2000 characters)", { id: "chat" });
+      return;
+    }
+
     if (inputRef && inputRef.current) {
       inputRef.current.value = "";
     }
     const newMessage: Message = { role: "user", content };
     setChatMessages((prev) => [...prev, newMessage]);
-    const chatData = await sendChatRequest(content);
-    setChatMessages([...chatData.chats]);
-    //
+    
+    try {
+      const chatData = await sendChatRequest(content);
+      setChatMessages([...chatData.chats]);
+    } catch (error: any) {
+      console.error(error);
+      // Display specific error message
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to send message. Please try again.";
+      toast.error(errorMessage, { id: "chat" });
+      // Remove the user message that failed
+      setChatMessages((prev) => prev.slice(0, -1));
+    }
   };
   const handleDeleteChats = async () => {
     try {

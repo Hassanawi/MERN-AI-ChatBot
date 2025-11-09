@@ -13,13 +13,26 @@ const Login = () => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    // Client-side validation
+    if (!email || !email.includes("@")) {
+      toast.error("Please enter a valid email address", { id: "login" });
+      return;
+    }
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters", { id: "login" });
+      return;
+    }
+
     try {
       toast.loading("Signing In", { id: "login" });
       await auth?.login(email, password);
       toast.success("Signed In Successfully", { id: "login" });
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      toast.error("Signing In Failed", { id: "login" });
+      // Display specific error message from backend
+      const errorMessage = error?.response?.data || error?.message || "Signing In Failed. Please check your credentials.";
+      toast.error(errorMessage, { id: "login" });
     }
   };
   useEffect(() => {

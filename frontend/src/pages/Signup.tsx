@@ -14,13 +14,30 @@ const Signup = () => {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    // Client-side validation
+    if (!name || name.trim().length < 2) {
+      toast.error("Name must be at least 2 characters", { id: "signup" });
+      return;
+    }
+    if (!email || !email.includes("@")) {
+      toast.error("Please enter a valid email address", { id: "signup" });
+      return;
+    }
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters", { id: "signup" });
+      return;
+    }
+
     try {
       toast.loading("Signing Up", { id: "signup" });
       await auth?.signup(name, email, password);
       toast.success("Signed Up Successfully", { id: "signup" });
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      toast.error("Signing Up Failed", { id: "signup" });
+      // Display specific error message from backend
+      const errorMessage = error?.response?.data || error?.message || "Signing Up Failed. Please try again.";
+      toast.error(errorMessage, { id: "signup" });
     }
   };
   useEffect(() => {
