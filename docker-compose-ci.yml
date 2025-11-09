@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongo-ci:
+    image: mongo:7.0
+    container_name: mern-chatbot-mongo-ci
+    restart: unless-stopped
+    ports:
+      - "27018:27017"  # Different port to avoid conflicts with local dev
+    environment:
+      MONGO_INITDB_DATABASE: mernai_chatbot
+    volumes:
+      - mongo-ci-data:/data/db
+    networks:
+      - mern-network-ci
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend-ci:
+    image: hsk09/mern-chatbot-backend:latest
+    container_name: mern-chatbot-backend-ci
+    restart: unless-stopped
+    ports:
+      - "5001:5000"  # Different port for CI
+    environment:
+      MONGODB_URL: mongodb://mongo-ci:27017/mernai_chatbot
+      JWT_SECRET: ${JWT_SECRET:-ci_jwt_secret_change_in_production}
+      COOKIE_SECRET: ${COOKIE_SECRET:-ci_cookie_secret_change_in_production}
+      OPEN_AI_SECRET: ${OPEN_AI_SECRET}
+      OPENROUTER_BASE: ${OPENROUTER_BASE:-https://openrouter.ai/api/v1}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemini-2.0-flash-exp:free}
+      OPEN_AI_STRICT: ${OPEN_AI_STRICT:-0}
+      PORT: 5000
+    depends_on:
+      mongo-ci:
+        condition: service_healthy
+    networks:
+      - mern-network-ci
+    volumes:
+      - backend-ci-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend
+  frontend-ci:
+    image: hsk09/mern-chatbot-frontend:latest
+    container_name: mern-chatbot-frontend-ci
+    restart: unless-stopped
+    ports:
+      - "5174:80"  # Different port for CI
+    depends_on:
+      - backend-ci
+    networks:
+      - mern-network-ci
+    environment:
+      VITE_API_URL: http://localhost:5001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  mern-network-ci:
+    driver: bridge
+
+volumes:
+  mongo-ci-data:
+    driver: local
+  backend-ci-logs:
+    driver: local

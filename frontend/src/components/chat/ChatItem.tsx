@@ -1,4 +1,4 @@
-import React from "react";
+// React import not required with new JSX transform
 import { Box, Avatar, Typography } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -35,6 +35,13 @@ const ChatItem = ({
 }) => {
   const messageBlocks = extractCodeFromString(content);
   const auth = useAuth();
+  const initials = (() => {
+    const name = auth?.user?.name;
+    if (!name || name.trim() === "") return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  })();
   return role == "assistant" ? (
     <Box
       sx={{
@@ -77,8 +84,7 @@ const ChatItem = ({
       }}
     >
       <Avatar sx={{ ml: "0", bgcolor: "black", color: "white" }}>
-        {auth?.user?.name[0]}
-        {auth?.user?.name.split(" ")[1][0]}
+        {initials}
       </Avatar>
       <Box>
         {!messageBlocks && (

@@ -4,7 +4,11 @@ import { COOKIE_NAME } from "./constants.js";
 
 export const createToken = (id: string, email: string, expiresIn: string) => {
   const payload = { id, email };
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing JWT_SECRET environment variable");
+  }
+  const token = (jwt as any).sign(payload, secret, {
     expiresIn,
   });
   return token;
@@ -19,16 +23,25 @@ export const verifyToken = async (
   if (!token || token.trim() === "") {
     return res.status(401).json({ message: "Token Not Received" });
   }
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return res.status(500).json({ message: "Server configuration error" });
+  }
+
   return new Promise<void>((resolve, reject) => {
-    return jwt.verify(token, process.env.JWT_SECRET, (err, success) => {
-      if (err) {
-        reject(err.message);
-        return res.status(401).json({ message: "Token Expired" });
-      } else {
-        resolve();
-        res.locals.jwtData = success;
-        return next();
+    return (jwt as any).verify(
+      token,
+      secret,
+      (err: any, success: any) => {
+        if (err) {
+          reject(err.message);
+          return res.status(401).json({ message: "Token Expired" });
+        } else {
+          resolve();
+          res.locals.jwtData = success;
+          return next();
+        }
       }
-    });
+    );
   });
 };

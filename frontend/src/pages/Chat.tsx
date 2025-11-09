@@ -19,6 +19,13 @@ const Chat = () => {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const auth = useAuth();
+  const initials = (() => {
+    const name = auth?.user?.name;
+    if (!name || name.trim() === "") return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0][0];
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  })();
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const handleSubmit = async () => {
     const content = inputRef.current?.value as string;
@@ -99,8 +106,7 @@ const Chat = () => {
               fontWeight: 700,
             }}
           >
-            {auth?.user?.name[0]}
-            {auth?.user?.name.split(" ")[1][0]}
+            {initials}
           </Avatar>
           <Typography sx={{ mx: "auto", fontFamily: "work sans" }}>
             You are talking to a ChatBOT
