@@ -46,7 +46,10 @@ services:
       retries: 3
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api/v1}
     container_name: mern-chatbot-frontend
     restart: unless-stopped
     ports:
@@ -55,8 +58,6 @@ services:
       - backend
     networks:
       - mern-network
-    environment:
-      - VITE_API_URL=http://localhost:5000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
