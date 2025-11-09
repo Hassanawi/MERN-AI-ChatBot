@@ -1,4 +1,19 @@
-**node_modules
-**.env
-**package-lock.json
-**dist
+**/node_modules/
+dist/
+backend/dist/
+frontend/dist/
+**/package-lock.json
+
+# Environment files (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Logs and temp
+*.log
+*.tmp
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
