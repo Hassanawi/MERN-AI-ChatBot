@@ -422,3 +422,6 @@ This project is created for educational purposes as part of a DevOps assignment.
 - MongoDB for database
 - Docker for containerization
 - Jenkins for CI/CD automation
+
+ # #   S u c c e s s f u l l y   d e p l o y e d   w i t h   J e n k i n s   C I / C D !  
+ 
