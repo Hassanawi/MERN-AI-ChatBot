@@ -13,7 +13,9 @@ export const validate = (validations: ValidationChain[]) => {
     if (errors.isEmpty()) {
       return next();
     }
-    return res.status(422).json({ errors: errors.array() });
+    // Return first error message as a string for better UX
+    const firstError = errors.array()[0];
+    return res.status(422).send(firstError.msg);
   };
 };
 
