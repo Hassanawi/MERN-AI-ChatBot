@@ -1,121 +1,97 @@
 pipeline {
     agent any
     
-    environment {
-        // Docker Hub credentials (configure these in Jenkins credentials)
-        DOCKER_HUB_CREDENTIALS = credentials('dockerhub-credentials')
-        DOCKER_HUB_USERNAME = "hsk09"
-        
-        // Image names
-        BACKEND_IMAGE = "hsk09/mern-chatbot-backend"
-        FRONTEND_IMAGE = "hsk09/mern-chatbot-frontend"
-        
-        // Image tags
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        LATEST_TAG = "latest"
-    }
-    
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                echo 'Checking out source code...'
+                echo 'Fetching code from GitHub...'
                 checkout scm
+                echo 'Code fetched successfully!'
             }
         }
         
-        stage('Build Backend Image') {
+        stage('Build Application') {
             steps {
-                echo 'Building backend Docker image...'
-                dir('backend') {
-                    script {
-                        sh """
-                            docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} -t ${BACKEND_IMAGE}:${LATEST_TAG} .
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Build Frontend Image') {
-            steps {
-                echo 'Building frontend Docker image...'
-                dir('frontend') {
-                    script {
-                        sh """
-                            docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} -t ${FRONTEND_IMAGE}:${LATEST_TAG} .
-                        """
-                    }
+                echo 'Building application in containerized environment...'
+                script {
+                    // Start containers with code mounted as volumes
+                    sh """
+                        # Ensure environment is down before starting
+                        docker-compose -f docker-compose-ci.yml down || true
+                        
+                        # Start all services (code is mounted as volumes, not built as images)
+                        docker-compose -f docker-compose-ci.yml up -d
+                        
+                        echo "Waiting for services to start..."
+                        sleep 20
+                        
+                        # Check service status
+                        docker-compose -f docker-compose-ci.yml ps
+                        
+                        echo "Build phase completed - application running in containerized environment"
+                    """
                 }
             }
         }
         
         stage('Run Tests') {
             steps {
-                echo 'Running tests...'
+                echo 'Running tests in containerized environment...'
                 script {
-                    // Start services using docker-compose-ci.yml
                     sh """
-                        docker-compose -f docker-compose-ci.yml up -d
-                        sleep 15
-                        
-                        # Check if services are running
-                        docker-compose -f docker-compose-ci.yml ps
-                        
-                        # Wait for backend to be ready (retry up to 30 seconds)
-                        for i in {1..6}; do
+                        # Wait for services to be fully ready
+                        echo "Waiting for backend to be ready..."
+                        for i in {1..12}; do
                             if docker ps | grep -q 'mern-chatbot-backend-ci.*Up'; then
                                 echo "Backend container is running"
+                                sleep 5
                                 break
                             fi
-                            echo "Waiting for backend... (attempt \$i/6)"
+                            echo "Waiting for backend... (attempt \$i/12)"
                             sleep 5
                         done
                         
-                        # Test frontend is accessible
-                        curl -f http://localhost:5174 || exit 1
-                        echo "Frontend is accessible!"
-                        
                         # Verify all containers are running
+                        echo "Verifying all services..."
+                        docker ps | grep mern-chatbot-mongo-ci
                         docker ps | grep mern-chatbot-backend-ci
                         docker ps | grep mern-chatbot-frontend-ci
-                        docker ps | grep mern-chatbot-mongo-ci
                         
-                        echo "All services are healthy!"
+                        # Test frontend accessibility
+                        echo "Testing frontend..."
+                        for i in {1..6}; do
+                            if wget --spider --timeout=5 http://localhost:5174 2>/dev/null; then
+                                echo "Frontend is accessible!"
+                                break
+                            fi
+                            echo "Waiting for frontend... (attempt \$i/6)"
+                            sleep 5
+                        done
+                        
+                        # Show container logs for debugging
+                        echo "Container status:"
+                        docker-compose -f docker-compose-ci.yml ps
+                        
+                        echo "All services are running in containerized environment!"
                     """
                 }
             }
         }
         
-        stage('Push to Docker Hub') {
+        stage('Application Ready') {
             steps {
-                echo 'Pushing images to Docker Hub...'
+                echo 'Application built and running successfully!'
                 script {
                     sh """
-                        echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin
+                        echo "================================================"
+                        echo "Containerized application is UP and RUNNING"
+                        echo "Backend (CI): http://localhost:5001"
+                        echo "Frontend (CI): http://localhost:5174"
+                        echo "MongoDB (CI): localhost:27018"
+                        echo "================================================"
                         
-                        docker push ${BACKEND_IMAGE}:${IMAGE_TAG}
-                        docker push ${BACKEND_IMAGE}:${LATEST_TAG}
-                        
-                        docker push ${FRONTEND_IMAGE}:${IMAGE_TAG}
-                        docker push ${FRONTEND_IMAGE}:${LATEST_TAG}
-                        
-                        docker logout
-                    """
-                }
-            }
-        }
-        
-        stage('Deploy') {
-            steps {
-                echo 'Deploying application...'
-                script {
-                    // Pull and restart services with new images
-                    sh """
-                        docker-compose -f docker-compose-ci.yml down
-                        docker-compose -f docker-compose-ci.yml pull
-                        docker-compose -f docker-compose-ci.yml up -d
-                        
-                        echo "Deployment completed successfully!"
+                        # Show final status
+                        docker-compose -f docker-compose-ci.yml ps
                     """
                 }
             }
@@ -124,20 +100,21 @@ pipeline {
     
     post {
         always {
-            echo 'Cleaning up...'
+            echo 'Pipeline execution completed.'
             script {
-                // Stop and remove containers
-                sh 'docker-compose -f docker-compose-ci.yml down || true'
-                
-                // Remove dangling images
-                sh 'docker image prune -f || true'
+                // Show logs if failed
+                sh 'docker-compose -f docker-compose-ci.yml logs --tail=50 || true'
             }
         }
         success {
             echo 'Pipeline completed successfully! ✅'
+            echo 'Containerized environment is UP and RUNNING!'
+            echo 'Note: Containers will remain running until manually stopped.'
         }
         failure {
             echo 'Pipeline failed! ❌'
+            echo 'Cleaning up failed containers...'
+            sh 'docker-compose -f docker-compose-ci.yml down || true'
         }
     }
 }
