@@ -98,39 +98,38 @@ pipeline {
             steps {
                 echo 'Running Selenium automated test cases...'
                 script {
-                    def testResult = sh returnStatus: true, script: '''
-                        # Check if tests directory exists
-                        if [ ! -d "tests" ]; then
-                            echo "❌ Tests directory not found!"
-                            ls -la
-                            exit 1
-                        fi
-                        
-                        # Navigate to test directory
-                        cd tests
-                        
-                        # Build test Docker image
-                        echo "Building test Docker image with Chrome and ChromeDriver..."
-                        docker build -t mern-chatbot-selenium-tests .
-                        
-                        # Run Selenium tests in Docker container
-                        echo "Running Selenium tests in headless Chrome..."
-                        docker run --rm \
-                            --network="host" \
-                            -e BASE_URL=http://localhost:5174 \
-                            -e BACKEND_URL=http://localhost:5001 \
-                            -e HEADLESS=true \
-                            -v ${PWD}/reports:/app/reports \
-                            mern-chatbot-selenium-tests
-                        
-                        echo "Selenium tests completed!"
-                    '''
-                    
-                    if (testResult != 0) {
-                        echo "⚠️ Some tests failed, but marking as UNSTABLE (not blocking deployment)"
+                    try {
+                        sh """
+                            # Check if tests directory exists
+                            if [ ! -d "tests" ]; then
+                                echo "❌ Tests directory not found!"
+                                ls -la
+                                exit 1
+                            fi
+                            
+                            # Navigate to test directory
+                            cd tests
+                            
+                            # Build test Docker image
+                            echo "Building test Docker image with Chrome and ChromeDriver..."
+                            docker build -t mern-chatbot-selenium-tests .
+                            
+                            # Run Selenium tests in Docker container
+                            echo "Running Selenium tests in headless Chrome..."
+                            docker run --rm \
+                                --network="host" \
+                                -e BASE_URL=http://localhost:5174 \
+                                -e BACKEND_URL=http://localhost:5001 \
+                                -e HEADLESS=true \
+                                -v \${PWD}/reports:/app/reports \
+                                mern-chatbot-selenium-tests
+                            
+                            echo "✅ All Selenium tests passed successfully!"
+                        """
+                    } catch (Exception e) {
+                        echo "⚠️ Some tests failed: ${e.message}"
+                        echo "⚠️ Marking build as UNSTABLE (not blocking deployment)"
                         currentBuild.result = 'UNSTABLE'
-                    } else {
-                        echo "✅ All Selenium tests passed successfully!"
                     }
                 }
             }
