@@ -32,6 +32,9 @@ pipeline {
                 script {
                     // Start containers with code mounted as volumes
                     sh """
+                        # Force remove any existing containers with the same name
+                        docker rm -f mern-chatbot-mongo-ci mern-chatbot-backend-ci mern-chatbot-frontend-ci || true
+                        
                         # Ensure environment is down before starting
                         docker-compose -f docker-compose-ci.yml down || true
                         
