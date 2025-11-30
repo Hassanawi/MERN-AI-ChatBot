@@ -209,8 +209,8 @@ pipeline {
                         </html>
                     """,
                     mimeType: 'text/html',
-                    to: "qasimalik@gmail.com, hassansarfraz030@gmail.com",
-                    replyTo: "qasimalik@gmail.com",
+                    to: "qasimalik@gmail.com, hassan.sarfraz030@gmail.com",
+                    replyTo: "hassan.sarfraz030@gmail.com",
                     attachLog: true,
                     attachmentsPattern: 'tests/reports/test_report.html'
                 )
