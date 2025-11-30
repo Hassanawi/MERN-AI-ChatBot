@@ -2,12 +2,27 @@
 pipeline {
     agent any
     
+    environment {
+        // Git user who triggered the build
+        GIT_COMMITTER_EMAIL = sh(
+            script: "git log -1 --pretty=format:'%ae'",
+            returnStdout: true
+        ).trim()
+        GIT_COMMITTER_NAME = sh(
+            script: "git log -1 --pretty=format:'%an'",
+            returnStdout: true
+        ).trim()
+    }
+    
     stages {
         stage('Checkout Code') {
             steps {
                 echo 'Fetching code from GitHub...'
                 checkout scm
                 echo 'Code fetched successfully!'
+                script {
+                    echo "Build triggered by: ${GIT_COMMITTER_NAME} (${GIT_COMMITTER_EMAIL})"
+                }
             }
         }
         
@@ -35,9 +50,9 @@ pipeline {
             }
         }
         
-        stage('Run Tests') {
+        stage('Health Check Tests') {
             steps {
-                echo 'Running tests in containerized environment...'
+                echo 'Running health check tests in containerized environment...'
                 script {
                     sh """
                         # Wait for services to be fully ready
@@ -79,6 +94,61 @@ pipeline {
             }
         }
         
+        stage('Run Selenium Tests') {
+            steps {
+                echo 'Running Selenium automated test cases...'
+                script {
+                    try {
+                        sh """
+                            # Navigate to test directory
+                            cd tests
+                            
+                            # Build test Docker image
+                            echo "Building test Docker image with Chrome and ChromeDriver..."
+                            docker build -t mern-chatbot-selenium-tests .
+                            
+                            # Run Selenium tests in Docker container
+                            echo "Running Selenium tests in headless Chrome..."
+                            docker run --rm \
+                                --network="host" \
+                                -e BASE_URL=http://localhost:5174 \
+                                -e BACKEND_URL=http://localhost:5001 \
+                                -e HEADLESS=true \
+                                -v \$(pwd)/reports:/app/reports \
+                                mern-chatbot-selenium-tests
+                            
+                            echo "Selenium tests completed successfully!"
+                        """
+                    } catch (Exception e) {
+                        echo "Selenium tests failed: ${e.message}"
+                        currentBuild.result = 'UNSTABLE'
+                        error("Selenium tests failed")
+                    }
+                }
+            }
+        }
+        
+        stage('Archive Test Results') {
+            steps {
+                echo 'Archiving test results and reports...'
+                script {
+                    // Archive HTML test report
+                    archiveArtifacts artifacts: 'tests/reports/**/*', allowEmptyArchive: true
+                    
+                    // Publish HTML report
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'tests/reports',
+                        reportFiles: 'test_report.html',
+                        reportName: 'Selenium Test Report',
+                        reportTitles: 'Selenium Test Results'
+                    ])
+                }
+            }
+        }
+        
         stage('Application Ready') {
             steps {
                 echo 'Application built and running successfully!'
@@ -103,19 +173,57 @@ pipeline {
         always {
             echo 'Pipeline execution completed.'
             script {
-                // Show logs if failed
+                // Show logs if needed
                 sh 'docker-compose -f docker-compose-ci.yml logs --tail=50 || true'
+                
+                // Send email notification
+                def testResults = "Test results are attached. Please check Jenkins for detailed report."
+                def buildStatus = currentBuild.result ?: 'SUCCESS'
+                def buildUrl = env.BUILD_URL
+                
+                emailext(
+                    subject: "Jenkins Build ${buildStatus}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        <html>
+                        <body>
+                            <h2>Jenkins Build Notification</h2>
+                            <p><strong>Project:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build Number:</strong> ${env.BUILD_NUMBER}</p>
+                            <p><strong>Build Status:</strong> <span style="color: ${buildStatus == 'SUCCESS' ? 'green' : 'red'}; font-weight: bold;">${buildStatus}</span></p>
+                            <p><strong>Triggered by:</strong> ${GIT_COMMITTER_NAME} (${GIT_COMMITTER_EMAIL})</p>
+                            <p><strong>Build URL:</strong> <a href="${buildUrl}">${buildUrl}</a></p>
+                            <p><strong>Test Report:</strong> <a href="${buildUrl}Selenium_20Test_20Report/">View Selenium Test Report</a></p>
+                            <hr>
+                            <h3>Test Summary</h3>
+                            <p>${testResults}</p>
+                            <hr>
+                            <p><em>This is an automated message from Jenkins CI/CD pipeline.</em></p>
+                        </body>
+                        </html>
+                    """,
+                    mimeType: 'text/html',
+                    to: "qasimalik@gmail.com, hassansarfraz030@gmail.com",
+                    replyTo: "qasimalik@gmail.com",
+                    attachLog: true,
+                    attachmentsPattern: 'tests/reports/test_report.html'
+                )
             }
         }
         success {
             echo 'Pipeline completed successfully! ✅'
             echo 'Containerized environment is UP and RUNNING!'
-            echo 'Note: Containers will remain running until manually stopped.'
+            echo 'Selenium tests passed!'
+            echo 'Email notification sent to collaborator.'
         }
         failure {
             echo 'Pipeline failed! ❌'
+            echo 'Email notification sent to collaborator.'
             echo 'Cleaning up failed containers...'
             sh 'docker-compose -f docker-compose-ci.yml down || true'
+        }
+        unstable {
+            echo 'Pipeline completed with test failures! ⚠️'
+            echo 'Email notification sent to collaborator.'
         }
     }
 }
