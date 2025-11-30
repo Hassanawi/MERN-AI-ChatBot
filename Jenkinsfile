@@ -100,6 +100,13 @@ pipeline {
                 script {
                     try {
                         sh """
+                            # Check if tests directory exists
+                            if [ ! -d "tests" ]; then
+                                echo "❌ Tests directory not found!"
+                                ls -la
+                                exit 1
+                            fi
+                            
                             # Navigate to test directory
                             cd tests
                             
@@ -114,7 +121,7 @@ pipeline {
                                 -e BASE_URL=http://localhost:5174 \
                                 -e BACKEND_URL=http://localhost:5001 \
                                 -e HEADLESS=true \
-                                -v \$(pwd)/reports:/app/reports \
+                                -v \${PWD}/reports:/app/reports \
                                 mern-chatbot-selenium-tests
                             
                             echo "Selenium tests completed successfully!"
