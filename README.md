@@ -137,12 +137,29 @@ docker-compose -f docker-compose-ci.yml up -d
 
 ### Pipeline Stages
 
+#### Standard Pipeline (Assignment 2)
 1. **Checkout**: Clone repository
 2. **Build Backend Image**: Build backend Docker image
 3. **Build Frontend Image**: Build frontend Docker image
 4. **Run Tests**: Start services and run health checks
 5. **Push to Docker Hub**: Push images to registry
 6. **Deploy**: Deploy with latest images
+
+#### Enhanced Pipeline with Selenium Tests (Assignment 3) ⭐
+1. **Checkout Code**: Fetch code from GitHub
+2. **Build Application**: Start services with Docker Compose
+3. **Health Check Tests**: Verify all services are running
+4. **Run Selenium Tests**: Execute 15 automated test cases in Docker
+5. **Archive Test Results**: Save and publish HTML test reports
+6. **Application Ready**: Display deployment information
+7. **Email Notifications**: Send test results to Git committer
+
+**New Features:**
+- ✅ Automated Selenium test execution in containerized environment
+- ✅ HTML test report publishing in Jenkins UI
+- ✅ Email notifications with test results and build status
+- ✅ Screenshots captured on test failures
+- ✅ Test artifacts archived for each build
 
 ### Environment Variables for Jenkins
 
@@ -252,6 +269,38 @@ server {
 | `DOCKER_HUB_USERNAME` | Your Docker Hub username | ✅ |
 
 ## 🧪 Testing
+
+### Automated Selenium Tests (Assignment 3) ⭐
+
+**15 comprehensive automated test cases** using Selenium WebDriver:
+
+```bash
+# Quick test execution (Windows)
+.\run-tests-local.ps1
+
+# Quick test execution (Linux/Mac)
+./run-tests-local.sh
+
+# Manual test execution
+cd tests
+pip install -r requirements.txt
+pytest test_chatbot.py -v --html=reports/test_report.html
+```
+
+**Test Coverage:**
+- ✅ Home Page Tests (4 tests)
+- ✅ Login Page Tests (4 tests)
+- ✅ Signup Page Tests (3 tests)
+- ✅ Chat & General Tests (4 tests)
+
+**Features:**
+- Headless Chrome support for CI/CD
+- HTML test reports with screenshots
+- Docker containerized test execution
+- Page Object Model architecture
+- Automated failure screenshots
+
+📖 **Full documentation:** See [tests/README.md](tests/README.md) and [ASSIGNMENT-3-REPORT.md](ASSIGNMENT-3-REPORT.md)
 
 ### Manual Testing
 
@@ -423,5 +472,6 @@ This project is created for educational purposes as part of a DevOps assignment.
 - Docker for containerization
 - Jenkins for CI/CD automation
 
- # #   S u c c e s s f u l l y   d e p l o y e d   w i t h   J e n k i n s   C I / C D !  
+ # #   S u c c e s s f u l l y   d e p l o y e d   w i t h   J e n k i n s   C I / C D ! 
+ 
  
