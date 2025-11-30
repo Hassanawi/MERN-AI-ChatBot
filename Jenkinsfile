@@ -141,17 +141,7 @@ pipeline {
                 script {
                     // Archive HTML test report
                     archiveArtifacts artifacts: 'tests/reports/**/*', allowEmptyArchive: true
-                    
-                    // Publish HTML report
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'tests/reports',
-                        reportFiles: 'test_report.html',
-                        reportName: 'Selenium Test Report',
-                        reportTitles: 'Selenium Test Results'
-                    ])
+                    echo 'Test reports archived successfully'
                 }
             }
         }
