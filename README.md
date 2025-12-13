@@ -1,4 +1,4 @@
-# MERN AI ChatBot - DevOps Assignment
+ # MERN AI ChatBot - DevOps Assignment
 
 A full-stack MERN (MongoDB, Express, React, Node.js) chatbot application integrated with OpenRouter AI models, containerized with Docker and automated with Jenkins CI/CD.
 
